@@ -6,6 +6,7 @@ import (
 
 	"backend/database"
 	"backend/handlers"
+	"backend/jwtLogic"
 
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
@@ -21,7 +22,7 @@ func main() {
 	router := mux.NewRouter()
 	
 
-	router.HandleFunc("/generate-token", handlers.GenerateToken).Methods("POST")
+	router.HandleFunc("/generate-token", jwtLogic.GenerateToken).Methods("POST")
 	// User routes
 	router.Handle("/users/{userAddress}", handlers.JWTAuth(http.HandlerFunc(handlers.GetUserByAddress))).Methods("GET")
 

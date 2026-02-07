@@ -6,18 +6,28 @@ import (
 
 	"backend/database"
 	"backend/models"
+	"backend/jwtLogic"
 
 	"github.com/gorilla/mux"
 	"gorm.io/gorm"
+
+	"strings"
+	"fmt"
 )
 
 // GetUserByAddress handles GET /users/{userAddress}
 func GetUserByAddress(w http.ResponseWriter, r *http.Request) {
+	userAddressFromCookie := r.Context().Value(jwtLogic.UserContextKey).(string)
 	vars := mux.Vars(r)
 	userAddress := vars["userAddress"]
 
 	if userAddress == "" {
 		http.Error(w, "User address is required", http.StatusBadRequest)
+		return
+	}
+
+	if !strings.EqualFold(userAddressFromCookie, userAddress) {
+		http.Error(w, "signature does not match address", http.StatusUnauthorized)
 		return
 	}
 
@@ -42,6 +52,7 @@ func GetUserByAddress(w http.ResponseWriter, r *http.Request) {
 
 // GetUserTemplates handles GET /templates/{userAddress}
 func GetUserTemplates(w http.ResponseWriter, r *http.Request) {
+	userAddressFromCookie := r.Context().Value(jwtLogic.UserContextKey).(string)
 	vars := mux.Vars(r)
 	userAddress := vars["userAddress"]
 
@@ -49,6 +60,12 @@ func GetUserTemplates(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "User address is required", http.StatusBadRequest)
 		return
 	}
+
+	if !strings.EqualFold(userAddressFromCookie, userAddress) {
+		http.Error(w, "signature does not match address", http.StatusUnauthorized)
+		return
+	}
+
 
 	// Find the user by Ethereum address and preload payment templates and transfers inside them
 	var user models.User
