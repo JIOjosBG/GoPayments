@@ -3,11 +3,15 @@ package handlers
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
 // @TODO change
@@ -17,26 +21,51 @@ const UserContextKey string = "user"
 
 // GenerateToken sets the JWT in an HTTP-only cookie
 func GenerateToken(w http.ResponseWriter, r *http.Request) {
-	// @TODO add signature validation
-	// Parse JSON body
-
 	var req struct {
 		UserAddress string `json:"userAddress"`
+		Message     string `json:"message"`
+		Signature   string `json:"signature"`
 	}
+
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
-	if req.UserAddress == "" {
-		http.Error(w, "userAddress required", http.StatusBadRequest)
+
+	if req.UserAddress == "" || req.Message == "" || req.Signature == "" {
+		http.Error(w, "missing fields", http.StatusBadRequest)
+		return
+	}
+
+	msg := []byte("\x19Ethereum Signed Message:\n" + 
+	strconv.Itoa(len(req.Message)) + req.Message)
+	
+	hash := crypto.Keccak256Hash(msg)
+
+	sig := common.FromHex(req.Signature)
+	if len(sig) != 65 {
+		http.Error(w, "invalid signature length", http.StatusBadRequest)
+		return
+	}
+
+	if sig[64] >= 27 {
+		sig[64] -= 27
+	}
+
+	pubKey, err := crypto.SigToPub(hash.Bytes(), sig)
+	if err != nil {
+		http.Error(w, "invalid signature", http.StatusUnauthorized)
+		return
+	}
+
+	recoveredAddr := crypto.PubkeyToAddress(*pubKey)
+	if !strings.EqualFold(recoveredAddr.Hex(), req.UserAddress) {
+		http.Error(w, "signature does not match address", http.StatusUnauthorized)
 		return
 	}
 	
-	userAddress := req.UserAddress
-	fmt.Println("AAAAAAAAAA",userAddress)
-
 	claims := jwt.MapClaims{
-		"userAddress": userAddress,
+		"userAddress": req.UserAddress,
 		"exp":         time.Now().Add(15 * time.Minute).Unix(),
 	}
 
@@ -46,8 +75,6 @@ func GenerateToken(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "could not generate token", http.StatusInternalServerError)
 		return
 	}
-	fmt.Println("CCCCCC",tokenStr)
-
 
 	// Set HTTP-only cookie
 	http.SetCookie(w, &http.Cookie{
@@ -56,10 +83,8 @@ func GenerateToken(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 		Expires:  time.Now().Add(15 * time.Minute),
 		// Secure:   true,
-
 		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode, // or SameSiteNoneMode if cross-site
-
+		SameSite: http.SameSiteLaxMode,
 	})
 
 
