@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, ChangeEvent } from 'react';
 import { useEthereum } from '../contexts/EthereumContext';
 import { useBackend } from '../contexts/BackendContext';
 
-function Home() {
+function Home(): React.ReactElement {
   const { account, requestAccount } = useEthereum();
   const { 
     user, 
@@ -13,15 +13,31 @@ function Home() {
     isLoadingAssets,
   } = useBackend();
 
-  const [selectedAsset, setSelectedAsset] = useState('USDC');
-  const [amount, setAmount] = useState('');
-  const [destination, setDestination] = useState('');
+  const [selectedAsset, setSelectedAsset] = useState<string>('USDC');
+  const [amount, setAmount] = useState<string>('');
+  const [destination, setDestination] = useState<string>('');
+  
+  const handleAssetChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    setSelectedAsset(e.target.value);
+  };
+
+  const handleAmountChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setAmount(e.target.value);
+  };
+
+  const handleDestinationChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setDestination(e.target.value);
+  };
+
+  // Check if account is connected
+  const isAccountConnected = account.status === 'connected';
+  const accountAddress = account.status === 'connected' ? account.account : null;
   
   return (
     <div className="container">
       <div className="row">
         <div className="col-12">
-          {account ? (
+          {isAccountConnected ? (
             <>
               <div className="row">
                 <div className="col-md-6">
@@ -46,15 +62,14 @@ function Home() {
                       {templates.map(template => (
                         <li key={template.id}>
                           {template.name} {template.is_active ? '(Active)' : '(Cancelled)'}
-                          {template.transfers.map((transfer) => (
-                            <div>
+                          {template.transfers && template.transfers.map((transfer, index) => (
+                            <div key={index}>
                               <strong>To:</strong> {transfer.destination_user?.ethereum_address || "N/A"}
                               {" | "}
                               <strong>Asset:</strong> {transfer.asset?.symbol || "N/A"}
                               {" | "}
                               <strong>Amount:</strong> {transfer.amount}
                             </div>
-
                           ))}
                         </li>
                       ))}
@@ -64,7 +79,7 @@ function Home() {
                   )}
                 </div>
                 <div className="col-md-6">
-                  <h1>Home {account}</h1> 
+                  <h1>Home {accountAddress}</h1> 
                   <form className="mt-4">
                     <div className="mb-3">
                       <label htmlFor="asset-select" className="form-label">Select Asset</label>
@@ -73,7 +88,7 @@ function Home() {
                         id="asset-select"
                         name="asset"
                         value={selectedAsset}
-                        onChange={e => setSelectedAsset(e.target.value)}
+                        onChange={handleAssetChange}
                       >
                         {isLoadingAssets ? (
                           <option>Loading assets...</option>
@@ -96,7 +111,7 @@ function Home() {
                         placeholder="Enter amount"
                         name="amount"
                         value={amount}
-                        onChange={e => setAmount(e.target.value)}
+                        onChange={handleAmountChange}
                       />
                     </div>
                     <div className="mb-3">
@@ -108,7 +123,7 @@ function Home() {
                         placeholder="Enter destination address"
                         name="destination"
                         value={destination}
-                        onChange={e => setDestination(e.target.value)}
+                        onChange={handleDestinationChange}
                       />
                     </div>
                   </form>
@@ -132,11 +147,12 @@ function Home() {
               </div>
           </>
           ) : (
-            <button onClick={requestAccount} className="btn btn-primary">Request Account</button>
+            <button onClick={requestAccount} className="btn btn-primary">Login/Register</button>
           )}
         </div>
       </div>
     </div>
   );
 }
+
 export default Home;
