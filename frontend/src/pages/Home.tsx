@@ -1,16 +1,16 @@
-import React, { useState, ChangeEvent } from 'react';
+import React, { useState, ChangeEvent, useCallback } from 'react';
 import { useEthereum } from '../contexts/EthereumContext';
 import { useBackend } from '../contexts/BackendContext';
 
 function Home(): React.ReactElement {
-  const { account, requestAccount } = useEthereum();
+  const {  requestAccount, signLoginMessage } = useEthereum();
   const { 
     user, 
-    isLoadingUser, 
     templates, 
     isLoadingTemplates, 
     assets, 
     isLoadingAssets,
+    requestCookie
   } = useBackend();
 
   const [selectedAsset, setSelectedAsset] = useState<string>('USDC');
@@ -29,31 +29,39 @@ function Home(): React.ReactElement {
     setDestination(e.target.value);
   };
 
-  // Check if account is connected
-  const isAccountConnected = account.status === 'connected';
-  const accountAddress = account.status === 'connected' ? account.account : null;
-  
+  const attemptToAuthenticate  = useCallback(async ()=>{
+    const signedMessageData = await signLoginMessage()
+    if (!signedMessageData) return
+    const {message, signature, account} = signedMessageData
+    await requestCookie({ message, signature, account })
+
+  },[signLoginMessage,requestCookie])
+
   return (
     <div className="container">
       <div className="row">
         <div className="col-12">
-          {isAccountConnected ? (
+          {user.status !== 'not_connected' ? (
             <>
               <div className="row">
                 <div className="col-md-6">
                   <h2>User Information</h2>
-                  {isLoadingUser ? (
+                  {user.status === 'loading' ? (
                     <p>Loading user data...</p>
-                  ) : user ? (
+                  ) : user.status === 'ready' ? (
                     <div>
-                      <p><strong>Ethereum Address:</strong> {user.ethereum_address}</p>
-                      {user.username && <p><strong>Username:</strong> {user.username}</p>}
-                      <p><strong>Anonymous:</strong> {user.is_anonymous ? 'Yes' : 'No'}</p>
+                      <p><strong>Ethereum Address:</strong> {user.user.ethereum_address}</p>
+                      {<p><strong>Username:</strong> {user.user.username}</p>}
+                      <p><strong>Anonymous:</strong> {user.user.is_anonymous ? 'Yes' : 'No'}</p>
                     </div>
-                  ) : (
-                    <p>User not found in database. Connect your wallet to start.</p>
-                  )}
-                  
+                  ) : user.status === 'error' ? (
+                    <p>Error getting user wit address {user.address}.</p>
+                  ) : user.status === 'not_authenticated' ? (
+                   <div>
+                    <p>Not authenticated.</p>
+                    <button onClick={attemptToAuthenticate} className="btn btn-primary">Authenticate</button>
+                  </div>
+                  ) : (<p>unknown state</p>)}
                   <h3 className="mt-4">Payment Templates</h3>
                   {isLoadingTemplates ? (
                     <p>Loading templates...</p>
@@ -79,7 +87,7 @@ function Home(): React.ReactElement {
                   )}
                 </div>
                 <div className="col-md-6">
-                  <h1>Home {accountAddress}</h1> 
+                  <h1>Home accountAddress</h1> 
                   <form className="mt-4">
                     <div className="mb-3">
                       <label htmlFor="asset-select" className="form-label">Select Asset</label>
@@ -147,7 +155,7 @@ function Home(): React.ReactElement {
               </div>
           </>
           ) : (
-            <button onClick={requestAccount} className="btn btn-primary">Login/Register</button>
+            <button onClick={requestAccount} className="btn btn-primary">Connect account</button>
           )}
         </div>
       </div>

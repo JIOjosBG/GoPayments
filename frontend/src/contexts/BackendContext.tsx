@@ -1,8 +1,14 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect,  useCallback, use } from 'react';
 import { useEthereum } from './EthereumContext';
 
 // Type definitions based on backend Go models
-export interface User {
+export type User = 
+  | { status:'not_connected' }
+  | { status: 'loading' }
+  | { status: 'not_authenticated', address: string }
+  | { status: 'error', error:string, address: string }
+  | { status: 'ready', user: UserInfo }
+export interface UserInfo {
   id: number;
   created_at: string;
   email?: string;
@@ -20,13 +26,13 @@ export interface PaymentTemplate {
   is_active: boolean;
   scheduled_at?: string | null;
   recurring_interval?: number | null;
-  user?: User;
+  user?: UserInfo;
   transfers?: Transfer[];
 }
 
 export interface Transfer {
   id?: number;
-  destination_user?: User;
+  destination_user?: UserInfo;
   asset?: Asset;
   amount?: string;
   [key: string]: unknown; // Allow for other properties
@@ -45,9 +51,7 @@ export interface Asset {
 // Context value type
 interface BackendContextValue {
   // User data
-  user: User | null;
-  isLoadingUser: boolean;
-  userError: string | null;
+  user: User;
 
   // Templates data
   templates: PaymentTemplate[];
@@ -61,6 +65,8 @@ interface BackendContextValue {
 
   // Utility
   API_BASE_URL: string;
+
+  requestCookie: (args:{message:string;signature:string;account:string}) => void
 }
 
 // Create the context
@@ -74,12 +80,10 @@ type BackendProviderProps = React.PropsWithChildren;
 
 // Create the provider component
 export function BackendProvider({ children }: BackendProviderProps) {
-  const { account } = useEthereum();
+  const { account: ethereumAccount } = useEthereum();
   
   // State for user data
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoadingUser, setIsLoadingUser] = useState<boolean>(false);
-  const [userError, setUserError] = useState<string | null>(null);
+  const [user, setUser] = useState<User>({status:'not_connected'});
 
   // State for payment templates
   const [templates, setTemplates] = useState<PaymentTemplate[]>([]);
@@ -90,57 +94,69 @@ export function BackendProvider({ children }: BackendProviderProps) {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [isLoadingAssets, setIsLoadingAssets] = useState<boolean>(false);
   const [assetsError, setAssetsError] = useState<string | null>(null);
+  
+
+const fetchUser = useCallback(async(userAddress: string)=>{
+  setUser({status:'loading'})
+  try {
+    
+    const response = await fetch(`${API_BASE_URL}/users/${userAddress}`,{
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include"
+    });
+    
+    if (!response.ok) {
+
+      if (response.status === 404) {
+        // User not found is not an error, just means user doesn't exist yet
+        setUser({status:'error', address: userAddress, error:'Missing'});
+      } else if(response.status === 401) {
+
+        setUser({status:'not_authenticated', address: userAddress})
+      } else {
+        setUser({status:'error', address: userAddress, error:'Failed to get user'})
+      }
+    } else {
+      const userData = await response.json() as UserInfo;
+      console.log(userData);
+      setUser({status:'ready',user:userData});
+    }
+  } catch (error) {
+    console.error('Error fetching user:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+setUser({status:'error', address: userAddress, error:'Error fetching user'})
+  } 
+},[setUser])
+const requestCookie = useCallback(async ({message,signature,account}:{message:string,signature:string,account:string})=>{
+
+  if(user.status !== 'not_authenticated') return
+  await fetch(`${API_BASE_URL}/generate-token`,{
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userAddress: account, message, signature }),
+    credentials: "include"
+  }).then(r=>{console.log(r)});
+  fetchUser(user.address)
+
+}, [user])
+
 
   // Fetch user data as soon as account is connected
   useEffect(() => {
-    const fetchUser = async (userAddress: string) => {
-      if (!userAddress) {
-        setUser(null);
-        return;
-      }
-
-      setIsLoadingUser(true);
-      setUserError(null);
-      try {
-        console.log("response.ok");
-        
-        const response = await fetch(`${API_BASE_URL}/users/${userAddress}`);
-        
-        console.log(response.ok);
-        if (!response.ok) {
-          if (response.status === 404) {
-            // User not found is not an error, just means user doesn't exist yet
-            setUser(null);
-          } else {
-            throw new Error(`Failed to fetch user: ${response.statusText}`);
-          }
-        } else {
-          const userData = await response.json() as User;
-          console.log(userData);
-          setUser(userData);
-        }
-      } catch (error) {
-        console.error('Error fetching user:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        setUserError(errorMessage);
-        setUser(null);
-      } finally {
-        setIsLoadingUser(false);
-      }
-    };
-
-    // Extract account address if connected
-    if (account.status === 'connected' && account.account) {
-      fetchUser(account.account);
-    } else {
-      setUser(null);
+    if(ethereumAccount.status !== 'connected') {
+      setUser({status:'not_connected'})
+      return
     }
-  }, [account]);
-
+    fetchUser(ethereumAccount.account)
+  }, [ethereumAccount]);
+  useEffect(()=>{
+    if(user.status==='ready') fetchTemplates()
+  },[user.status])
+  
   // Fetch payment templates as soon as account is connected
-  useEffect(() => {
-    const fetchTemplates = async (userAddress: string) => {
-      if (!userAddress) {
+  const fetchTemplates = useCallback(async () => {
+      if (user.status!=='ready') {
         setTemplates([]);
         return;
       }
@@ -149,7 +165,11 @@ export function BackendProvider({ children }: BackendProviderProps) {
       setTemplatesError(null);
 
       try {
-        const response = await fetch(`${API_BASE_URL}/templates/${userAddress}`);
+        const response = await fetch(`${API_BASE_URL}/templates/${user.user.ethereum_address}`,{
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include"
+          });
 
         if (!response.ok) {
           if (response.status === 404) {
@@ -170,15 +190,8 @@ export function BackendProvider({ children }: BackendProviderProps) {
       } finally {
         setIsLoadingTemplates(false);
       }
-    };
 
-    // Extract account address if connected
-    if (account.status === 'connected' && account.account) {
-      fetchTemplates(account.account);
-    } else {
-      setTemplates([]);
-    }
-  }, [account]);
+  }, [user]);
 
   // Fetch assets once on mount
   useEffect(() => {
@@ -209,10 +222,9 @@ export function BackendProvider({ children }: BackendProviderProps) {
   }, []);
 
   const value: BackendContextValue = {
+    requestCookie,
     // User data
     user,
-    isLoadingUser,
-    userError,
     // Not exposing fetchUser, since it's handled by useEffect
 
     // Templates data
