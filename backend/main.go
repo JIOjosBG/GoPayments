@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 
@@ -21,15 +20,13 @@ func main() {
 	// Setup router
 	router := mux.NewRouter()
 	
-	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, "Hello, World!")
-	}).Methods("GET")
 
+	router.HandleFunc("/generate-token", handlers.GenerateToken).Methods("POST")
 	// User routes
-	router.HandleFunc("/users/{userAddress}", handlers.GetUserByAddress).Methods("GET")
+	router.Handle("/users/{userAddress}", handlers.JWTAuth(http.HandlerFunc(handlers.GetUserByAddress))).Methods("GET")
 
 	// Payment template routes
-	router.HandleFunc("/templates/{userAddress}", handlers.GetUserTemplates).Methods("GET")
+	router.Handle("/templates/{userAddress}", handlers.JWTAuth(http.HandlerFunc(handlers.GetUserTemplates))).Methods("GET")
 
 	// Asset routes
 	router.HandleFunc("/assets", handlers.GetAllAssets).Methods("GET")
