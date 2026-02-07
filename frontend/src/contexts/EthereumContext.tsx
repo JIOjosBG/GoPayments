@@ -1,4 +1,11 @@
-import React, { createContext, useContext, useState, useCallback } from "react";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+} from "react";
 
 // Type definitions
 export type EthereumAccountState =
@@ -10,6 +17,7 @@ export type EthereumAccountState =
 // Ethereum provider interface (EIP-1193)
 interface EthereumProviderAPI {
   request(args: { method: string; params?: unknown[] }): Promise<unknown[]>;
+  on(event: string, handler: (...args: any[]) => void): void;
 }
 
 // Extend Window interface
@@ -42,6 +50,16 @@ export function EthereumProvider({ children }: EthereumProviderProps) {
   const [account, setAccount] = useState<EthereumAccountState>({
     status: "idle",
   });
+
+  useEffect(() => {
+    if (!window.ethereum) {
+      setAccount({ status: "error", error: "No window.ethereum" });
+      return;
+    }
+    window.ethereum.on("accountsChanged", (accounts: string[]) =>
+      setAccount({ status: "connected", account: accounts[0] }),
+    );
+  }, [window]);
 
   const requestAccount = useCallback(() => {
     setAccount({ status: "loading" });
