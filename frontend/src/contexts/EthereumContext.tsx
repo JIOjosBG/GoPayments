@@ -23,6 +23,7 @@ declare global {
 interface EthereumContextValue {
   account: EthereumAccountState;
   requestAccount: () => void;
+  signLoginMessage: () => Promise<{message:string,signature:string,account:string} |null>
 }
 
 // Create the context
@@ -51,9 +52,29 @@ export function EthereumProvider({ children }: EthereumProviderProps) {
     }
   }, []);
 
+  const signLoginMessage = useCallback(async ():Promise<{message:string,signature:string,account:string} |null>=>{
+    if(!window.ethereum) return null
+    
+    if(account.status !=='connected') return null
+    const message =   `Welcome to GoPayments!
+Address: ${account.account}
+Timestamp: ${Date.now()}
+
+Sign this message to log in. Do not share this message with anyone.`;
+    const signature = await window.ethereum.request({
+      method: "personal_sign",
+      params: [message, account.account],
+    }).catch(e=>{
+      console.log('Error signing',e)
+    });
+    if(typeof signature !== 'string') return null
+    return {account: account.account, message, signature }
+  },[window, account])
+
   const value: EthereumContextValue = {
     account,
     requestAccount,
+    signLoginMessage
   };
 
   return <EthereumContext.Provider value={value}>{children}</EthereumContext.Provider>;
