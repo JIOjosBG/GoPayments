@@ -81,7 +81,9 @@ export function EthereumProvider({ children }: EthereumProviderProps) {
     } else {
       setAccount({ status: "error", error: "No Ethereum provider found" });
     }
-  }, []);
+  }, [window]);
+
+  useEffect(() => requestAccount(), [requestAccount]);
 
   const signLoginMessage = useCallback(async (): Promise<{
     message: string;

@@ -1,6 +1,7 @@
 import "./App.css";
 import Home from "./pages/Home";
 import Assets from "./pages/Assets";
+import History from "./pages/History";
 import Header from "./pages/components/Header";
 import {
   BrowserRouter as Router,
@@ -24,6 +25,7 @@ function App(): React.ReactElement {
         <Route element={<Layout />}>
           <Route path="/" element={<Home />} />
           <Route path="/assets" element={<Assets />} />
+          <Route path="/history" element={<History />} />
         </Route>
       </Routes>
     </Router>

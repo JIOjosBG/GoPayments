@@ -1,16 +1,6 @@
 import { useBackend } from "@/contexts/BackendContext";
 import { Coin, BoxArrowUpRight } from "react-bootstrap-icons";
 
-interface Asset {
-  id: number;
-  created_at: string;
-  symbol: string;
-  name: string;
-  decimals: number;
-  contract_address: string;
-  chain_id: number;
-}
-
 const explorerUrl = (chainId: number, address: string) => {
   const map: Record<number, string> = {
     1: "https://etherscan.io/token/",
