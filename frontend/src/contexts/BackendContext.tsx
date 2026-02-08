@@ -30,7 +30,7 @@ export interface PaymentTemplate {
   created_at: string;
   user_id: number;
   name: string;
-  is_active: boolean;
+  is_cancelled: boolean;
   scheduled_at?: string | null;
   recurring_interval?: number | null;
   user?: UserInfo;

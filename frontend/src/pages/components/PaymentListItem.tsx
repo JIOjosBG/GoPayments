@@ -45,10 +45,10 @@ function PaymentListItem({ template }: { template: PaymentTemplate }) {
               {template.name}{" "}
               <span
                 className={`badge ${
-                  template.is_active ? "bg-success" : "bg-secondary"
+                  template.is_cancelled ? "bg-danger" : "bg-success"
                 }`}
               >
-                {template.is_active ? "Active" : "Cancelled"}
+                {template.is_cancelled ? "Cancelled" : "Active"}
               </span>
             </h6>
 
