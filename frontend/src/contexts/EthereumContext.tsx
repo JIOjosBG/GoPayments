@@ -81,7 +81,7 @@ export function EthereumProvider({ children }: EthereumProviderProps) {
     } else {
       setAccount({ status: "error", error: "No Ethereum provider found" });
     }
-  }, [window]);
+  }, [window, setAccount]);
 
   useEffect(() => requestAccount(), [requestAccount]);
 

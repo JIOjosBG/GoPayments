@@ -4,10 +4,11 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 export function History() {
-  const { isLoadingTemplates, templates, user } = useBackend();
+  const { isLoadingTemplates, templates, user, fetchTemplates } = useBackend();
   const navigate = useNavigate();
   useEffect(() => {
     if (user.status === "not_authenticated") navigate("/");
+    fetchTemplates();
   }, [user.status]);
   return (
     <div className="container">

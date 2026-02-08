@@ -86,6 +86,8 @@ interface BackendContextValue {
     scheduledAt: number;
     timeInterval?: number;
   }) => void;
+  deletePaymentTemplate: (n: number) => void;
+  fetchTemplates: () => void;
 }
 
 // Create the context
@@ -145,7 +147,6 @@ export function BackendProvider({ children }: BackendProviderProps) {
           }
         } else {
           const userData = (await response.json()) as UserInfo;
-          console.log(userData);
           setUser({ status: "ready", user: userData });
         }
       } catch (error) {
@@ -182,6 +183,17 @@ export function BackendProvider({ children }: BackendProviderProps) {
     },
     [user],
   );
+  const deletePaymentTemplate = useCallback(
+    async (templateId: number) => {
+      await fetch(`${API_BASE_URL}/templates/${templateId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      fetchTemplates();
+    },
+    [user],
+  );
 
   // Fetch user data as soon as account is connected
   useEffect(() => {
@@ -190,7 +202,8 @@ export function BackendProvider({ children }: BackendProviderProps) {
       return;
     }
     fetchUser(ethereumAccount.account);
-  }, [ethereumAccount]);
+  }, [ethereumAccount.status]);
+
   useEffect(() => {
     if (user.status === "ready") fetchTemplates();
   }, [user.status]);
@@ -295,7 +308,8 @@ export function BackendProvider({ children }: BackendProviderProps) {
         }),
         credentials: "include",
       });
-      console.log(response, await response.json());
+
+      fetchTemplates();
     },
     [],
   );
@@ -304,24 +318,23 @@ export function BackendProvider({ children }: BackendProviderProps) {
     requestCookie,
     // User data
     user,
-    // Not exposing fetchUser, since it's handled by useEffect
 
     // Templates data
     templates,
     isLoadingTemplates,
     templatesError,
-    // Not exposing fetchTemplates, since it's handled by useEffect
 
     // Assets data
     assets,
     isLoadingAssets,
     assetsError,
-    // Not exposing fetchAssets, since it's handled by useEffect
 
     // Utility
     API_BASE_URL,
 
     sendPaymentToBackend,
+    deletePaymentTemplate,
+    fetchTemplates,
   };
 
   return (

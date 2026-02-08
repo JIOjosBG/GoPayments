@@ -18,7 +18,7 @@ type PaymentTemplate struct {
 
 	// Relations
 	User      User      `gorm:"foreignKey:UserID" json:"user,omitempty"`
-	Transfers []Transfer `gorm:"foreignKey:PaymentTemplateID" json:"transfers,omitempty"`
+	Transfers []Transfer `gorm:"foreignKey:PaymentTemplateID;constraint:OnDelete:CASCADE;" json:"transfers,omitempty"`
 }
 
 // TableName specifies the table name for PaymentTemplate

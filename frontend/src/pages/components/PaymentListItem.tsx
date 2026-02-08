@@ -1,17 +1,14 @@
-import { PaymentTemplate } from "@/contexts/BackendContext";
+import { PaymentTemplate, useBackend } from "@/contexts/BackendContext";
 import { useEthereum } from "@/contexts/EthereumContext";
 import { Interface } from "ethers";
 import { parseUnits } from "ethers";
 import { useCallback } from "react";
-import {
-  ArrowRepeat,
-  FileEarmarkText,
-  TerminalPlus,
-} from "react-bootstrap-icons";
+import { ArrowRepeat, FileEarmarkText, Trash } from "react-bootstrap-icons";
 const iface = new Interface(["function transfer(address,uint)"]);
 
 function PaymentListItem({ template }: { template: PaymentTemplate }) {
   const { sendCallsViaWallet } = useEthereum();
+  const { deletePaymentTemplate } = useBackend();
 
   const onRepeat = useCallback(() => {
     const chainId: number = template.transfers
@@ -87,6 +84,12 @@ Amount,Destination,Asset id,Asset symbol,Asset decimals,Asset address,Asset chai
                 onClick={exportAsCsv}
               >
                 <FileEarmarkText />
+              </button>
+              <button
+                className="btn btn-outline-danger btn-sm"
+                onClick={() => deletePaymentTemplate(template.id)}
+              >
+                <Trash />
               </button>
             </div>
           </div>

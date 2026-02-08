@@ -232,3 +232,35 @@ func CreateUserTemplate(w http.ResponseWriter, r *http.Request) {
 		"status": "success",
 	})
 }
+
+
+
+
+func DeleteTemplate(w http.ResponseWriter, r *http.Request) {
+	userAddressFromCookie := r.Context().Value(jwtLogic.UserContextKey).(string)
+	vars := mux.Vars(r)
+	templateId := vars["templateId"]
+
+	var template models.PaymentTemplate
+	if err := database.DB.Preload("User").First(&template, "id = ?", templateId).Error; err != nil {		
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	if template.User.EthereumAddress != userAddressFromCookie {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	if err := database.DB.Delete(&template).Delete(&models.Transfer{}).Error; err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{
+		"status": "success",
+	})
+}

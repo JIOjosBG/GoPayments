@@ -39,6 +39,7 @@ func main() {
 	// Payment template routes
 	router.Handle("/templates/{userAddress}", handlers.JWTAuth(http.HandlerFunc(handlers.GetUserTemplates))).Methods("GET")
 	router.Handle("/templates/{userAddress}", handlers.JWTAuth(http.HandlerFunc(handlers.CreateUserTemplate))).Methods("POST")
+	router.Handle("/templates/{templateId}", handlers.JWTAuth(http.HandlerFunc(handlers.DeleteTemplate))).Methods("DELETE")
 
 
 	// Asset routes
