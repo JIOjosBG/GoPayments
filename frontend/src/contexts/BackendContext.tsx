@@ -34,15 +34,14 @@ export interface PaymentTemplate {
   scheduled_at?: string | null;
   recurring_interval?: number | null;
   user?: UserInfo;
-  transfers?: Transfer[];
+  transfers: Transfer[];
 }
 
 export interface Transfer {
   id?: number;
-  destination_user_address?: string;
-  asset?: Asset;
-  amount?: string;
-  [key: string]: unknown; // Allow for other properties
+  destination_user_address: string;
+  asset: Asset;
+  amount: string;
 }
 
 export interface Asset {

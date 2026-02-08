@@ -2,6 +2,7 @@ import React, { useCallback } from "react";
 import { useEthereum } from "../contexts/EthereumContext";
 import { useBackend } from "../contexts/BackendContext";
 import CreatePayment from "./components/CreatePayment";
+import PaymentListItem from "./components/PaymentListItem";
 
 function Home(): React.ReactElement {
   const { requestAccount, signLoginMessage } = useEthereum();
@@ -62,22 +63,7 @@ function Home(): React.ReactElement {
                   ) : templates.length > 0 ? (
                     <ul>
                       {templates.map((template) => (
-                        <li key={template.id}>
-                          {template.name}{" "}
-                          {template.is_active ? "(Active)" : "(Cancelled)"}
-                          {template.transfers &&
-                            template.transfers.map((transfer, index) => (
-                              <div key={index}>
-                                <strong>To:</strong>{" "}
-                                {transfer.destination_user_address || "N/A"}
-                                {" | "}
-                                <strong>Asset:</strong>{" "}
-                                {transfer.asset?.symbol || "N/A"}
-                                {" | "}
-                                <strong>Amount:</strong> {transfer.amount}
-                              </div>
-                            ))}
-                        </li>
+                        <PaymentListItem template={template} />
                       ))}
                     </ul>
                   ) : (
