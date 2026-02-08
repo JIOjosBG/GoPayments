@@ -1,0 +1,6 @@
+Name,Chain id,User address,Scheduled at,Interval in seconds,Number of transfers
+Monthly Recurring Payment,8453,0x6969174FD72466430a46e18234D0b530c9FD5f49,2026-02-09T15:09:39.686+02:00,86400,3
+Amount,Destination,Asset id,Asset symbol,Asset decimals,Asset address,Asset chain id
+100.5,0x1234567890abcdef1234567890abcdef12345678,1,USDC,6,0x833589fcd6edb6e08f4c7c32d4f71b54bda02913,8453
+0.5,0x1234567890abcdef1234567890abcdef12345678,2,ETH,18,0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee,8453
+250.75,0x1234567890abcdef1234567890abcdef12345678,3,EURC,6,0x60a3e35cc302bfa44cb288bc5a4f316fdb1adb42,8453
