@@ -30,7 +30,6 @@ func main() {
 
 	// Setup router
 	router := mux.NewRouter()
-	
 
 	router.HandleFunc("/generate-token", jwtLogic.GenerateToken).Methods("POST")
 	// User routes
@@ -42,18 +41,17 @@ func main() {
 	router.Handle("/templates/{templateId}", handlers.JWTAuth(http.HandlerFunc(handlers.DeleteTemplate))).Methods("DELETE")
 	router.Handle("/templates/{templateId}", handlers.JWTAuth(http.HandlerFunc(handlers.UpdateTemplate))).Methods("PUT")
 
-
 	// Asset routes
 	router.HandleFunc("/assets", handlers.GetAllAssets).Methods("GET")
 
 	// Configure CORS
 	c := cors.New(cors.Options{
-		AllowedOrigins: []string{"http://localhost:3000", "http://localhost:3001"}, // Add your frontend URLs
-		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders: []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
-		ExposedHeaders: []string{"Link"},
+		AllowedOrigins:   []string{"http://localhost:3000", "http://localhost:3001"}, // Add your frontend URLs
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+		ExposedHeaders:   []string{"Link"},
 		AllowCredentials: true,
-		MaxAge: 300, // Maximum value not ignored by any of major browsers
+		MaxAge:           300, // Maximum value not ignored by any of major browsers
 	})
 
 	// Wrap the router with CORS middleware

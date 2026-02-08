@@ -68,7 +68,6 @@ func GetUserTemplates(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	// Find the user by Ethereum address and preload payment templates and transfers inside them
 	var user models.User
 	result := database.DB.
@@ -92,7 +91,6 @@ func GetUserTemplates(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(user.PaymentTemplates)
 }
 
-
 func CreateUserTemplate(w http.ResponseWriter, r *http.Request) {
 	userAddressFromCookie := r.Context().Value(jwtLogic.UserContextKey).(string)
 	vars := mux.Vars(r)
@@ -107,38 +105,37 @@ func CreateUserTemplate(w http.ResponseWriter, r *http.Request) {
 	)
 
 	type AssetInput struct {
-		ID             uint      `json:"id"`                       // Asset DB ID
-		Symbol         string    `json:"symbol"`                   // Asset symbol
-		Name           string    `json:"name"`                     // Asset name
-		Decimals       uint8     `json:"decimals"`                 // Asset decimals
-		ContractAddress string   `json:"contract_address,omitempty"` // ERC-20 contract address
-		ChainID        uint64    `json:"chain_id"`                 // Blockchain chain ID
+		ID              uint   `json:"id"`                         // Asset DB ID
+		Symbol          string `json:"symbol"`                     // Asset symbol
+		Name            string `json:"name"`                       // Asset name
+		Decimals        uint8  `json:"decimals"`                   // Asset decimals
+		ContractAddress string `json:"contract_address,omitempty"` // ERC-20 contract address
+		ChainID         uint64 `json:"chain_id"`                   // Blockchain chain ID
 	}
 
 	type TransferInput struct {
-		Amount      float64     `json:"amount"`               // Transfer amount
-		Destination string      `json:"destination"`          // Destination Ethereum address
-		Asset       AssetInput  `json:"asset"`                // Asset info
+		Amount      float64    `json:"amount"`      // Transfer amount
+		Destination string     `json:"destination"` // Destination Ethereum address
+		Asset       AssetInput `json:"asset"`       // Asset info
 	}
 
 	type CreateTemplateRequest struct {
-		UserAddress string           `json:"userAddress"`        // Ethereum address of the user
-		ChainID     uint64           `json:"chainId"`            // Blockchain network ID
-		Type        TypeOfBatch           `json:"type"`               // Payment type, e.g., "NOW"
-		Transfers   []TransferInput  `json:"transfers"`          // List of transfers
-		ScheduledAt   int64  `json:"scheduledAt"`          // List of transfers
-		RecurringInterval	int64 	`json:"timeInterval"`
-
+		UserAddress       string          `json:"userAddress"` // Ethereum address of the user
+		ChainID           uint64          `json:"chainId"`     // Blockchain network ID
+		Type              TypeOfBatch     `json:"type"`        // Payment type, e.g., "NOW"
+		Transfers         []TransferInput `json:"transfers"`   // List of transfers
+		ScheduledAt       int64           `json:"scheduledAt"` // List of transfers
+		RecurringInterval int64           `json:"timeInterval"`
 	}
 
-	var req CreateTemplateRequest;
+	var req CreateTemplateRequest
 
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
-	
+
 	if userAddress == "" {
 		http.Error(w, "User address is required", http.StatusBadRequest)
 		return
@@ -164,30 +161,30 @@ func CreateUserTemplate(w http.ResponseWriter, r *http.Request) {
 	var template models.PaymentTemplate
 	switch req.Type {
 	case TypeNow:
-		name := "Payment"	
+		name := "Payment"
 		template = models.PaymentTemplate{
-			UserID: user.ID,
-			Name:   name, 
+			UserID:      user.ID,
+			Name:        name,
 			IsCancelled: false,
 		}
 	case TypeSchedule:
 		name := "Scheduled Payment"
-		t := time.Unix(req.ScheduledAt/1000,0)
+		t := time.Unix(req.ScheduledAt/1000, 0)
 		template = models.PaymentTemplate{
-			UserID: user.ID,
-			Name:   name, 
+			UserID:      user.ID,
+			Name:        name,
 			IsCancelled: false,
 			ScheduledAt: &t,
 		}
 	case TypeRecurring:
 		name := "Recurring Payment"
-		t := time.Unix(req.ScheduledAt/1000,0)
-		interval := req.RecurringInterval/1000
+		t := time.Unix(req.ScheduledAt/1000, 0)
+		interval := req.RecurringInterval / 1000
 		template = models.PaymentTemplate{
-			UserID: user.ID,
-			Name:   name, 
-			IsCancelled: false,
-			ScheduledAt: &t,
+			UserID:            user.ID,
+			Name:              name,
+			IsCancelled:       false,
+			ScheduledAt:       &t,
 			RecurringInterval: &interval,
 		}
 	}
@@ -201,18 +198,17 @@ func CreateUserTemplate(w http.ResponseWriter, r *http.Request) {
 		}
 
 		transfers = append(transfers, models.Transfer{
-			SourceUserID:      user.ID,
-			DestinationUserAddress:	t.Destination,
-			Amount:            t.Amount,
-			AssetID:           asset.ID,
-			Status:            models.TransferStatusPending,
-			Asset:             asset,
+			SourceUserID:           user.ID,
+			DestinationUserAddress: t.Destination,
+			Amount:                 t.Amount,
+			AssetID:                asset.ID,
+			Status:                 models.TransferStatusPending,
+			Asset:                  asset,
 		})
 	}
 
 	// Attach transfers to template
 	template.Transfers = transfers
-	
 
 	newRecord := database.DB.Create(&template)
 	if newRecord.Error != nil {
@@ -220,7 +216,7 @@ func CreateUserTemplate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	switch req.Type{
+	switch req.Type {
 	case TypeSchedule:
 		scheduler.JobsChan <- scheduler.Job{RunAt: time.Unix(req.ScheduledAt/1000, 0), TemplateId: template.ID}
 	case TypeRecurring:
@@ -233,16 +229,13 @@ func CreateUserTemplate(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-
-
-
 func DeleteTemplate(w http.ResponseWriter, r *http.Request) {
 	userAddressFromCookie := r.Context().Value(jwtLogic.UserContextKey).(string)
 	vars := mux.Vars(r)
 	templateId := vars["templateId"]
 
 	var template models.PaymentTemplate
-	if err := database.DB.Preload("User").First(&template, "id = ?", templateId).Error; err != nil {		
+	if err := database.DB.Preload("User").First(&template, "id = ?", templateId).Error; err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -257,14 +250,12 @@ func DeleteTemplate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{
 		"status": "success",
 	})
 }
-
 
 func UpdateTemplate(w http.ResponseWriter, r *http.Request) {
 	userAddress := r.Context().Value(jwtLogic.UserContextKey).(string)

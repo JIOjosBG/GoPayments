@@ -9,8 +9,6 @@ import (
 	"backend/jwtLogic"
 )
 
-
-
 // JWTAuth reads the token from the HTTP-only cookie
 func JWTAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -31,7 +29,7 @@ func JWTAuth(next http.Handler) http.Handler {
 			http.Error(w, "invalid token", http.StatusUnauthorized)
 			return
 		}
-		
+
 		claims := token.Claims.(jwt.MapClaims)
 		address, ok := claims["userAddress"].(string)
 		if !ok {

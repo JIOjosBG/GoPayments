@@ -5,6 +5,7 @@ import (
 	"backend/models"
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -41,9 +42,9 @@ func GenerateToken(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// @TODO check timestamp of the message
-	msg := []byte("\x19Ethereum Signed Message:\n" + 
-	strconv.Itoa(len(req.Message)) + req.Message)
-	
+	msg := []byte("\x19Ethereum Signed Message:\n" +
+		strconv.Itoa(len(req.Message)) + req.Message)
+
 	hash := crypto.Keccak256Hash(msg)
 
 	sig := common.FromHex(req.Signature)
@@ -67,7 +68,7 @@ func GenerateToken(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "signature does not match address", http.StatusUnauthorized)
 		return
 	}
-	
+
 	claims := jwt.MapClaims{
 		"userAddress": req.UserAddress,
 		"exp":         time.Now().Add(15 * time.Minute).Unix(),
@@ -89,7 +90,6 @@ func GenerateToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenStr, err := token.SignedString(JwtKey)
 	if err != nil {
@@ -99,19 +99,21 @@ func GenerateToken(w http.ResponseWriter, r *http.Request) {
 
 	// Set HTTP-only cookie
 	http.SetCookie(w, &http.Cookie{
-		Name:     "token",
-		Value:    tokenStr,
-		Path:     "/",
-		Expires:  time.Now().Add(15 * time.Minute),
+		Name:    "token",
+		Value:   tokenStr,
+		Path:    "/",
+		Expires: time.Now().Add(15 * time.Minute),
 		// Secure:   true,
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
 	})
 
-
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
-	w.Write([]byte("token set in cookie"))
+	_, err = w.Write([]byte("token set in cookie"))
+	if err != nil {
+		log.Println("Write error:", err)
+	}
 }

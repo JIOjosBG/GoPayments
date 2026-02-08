@@ -20,8 +20,11 @@ func main() {
 	if err := database.InitDB(); err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
-	defer database.CloseDB()
-
+	defer func() {
+		if err := database.CloseDB(); err != nil {
+			log.Println("DB close error:", err)
+		}
+	}()
 	// Clean database if requested
 	if *cleanFlag || *cleanOnlyFlag {
 		log.Println("Cleaning database...")
@@ -29,7 +32,7 @@ func main() {
 			log.Fatalf("Failed to clean database: %v", err)
 		}
 		log.Println("Database cleaned successfully!")
-		
+
 		if *cleanOnlyFlag {
 			return // Exit after cleaning
 		}
@@ -181,28 +184,28 @@ func seedPaymentTemplate(userID uint, assetID uint) (*models.PaymentTemplate, er
 func seedTransfers(sourceUserID uint, DestinationUserAddress string, templateID uint, assets []models.Asset) ([]models.Transfer, error) {
 	transfers := []models.Transfer{
 		{
-			SourceUserID:      sourceUserID,
+			SourceUserID:           sourceUserID,
 			DestinationUserAddress: DestinationUserAddress,
-			PaymentTemplateID: &templateID,
-			Amount:            100.50,
-			AssetID:           assets[0].ID, // USDC
-			Status:            models.TransferStatusCompleted,
+			PaymentTemplateID:      &templateID,
+			Amount:                 100.50,
+			AssetID:                assets[0].ID, // USDC
+			Status:                 models.TransferStatusCompleted,
 		},
 		{
-			SourceUserID:      sourceUserID,
+			SourceUserID:           sourceUserID,
 			DestinationUserAddress: DestinationUserAddress,
-			PaymentTemplateID: &templateID,
-			Amount:            0.5,
-			AssetID:           assets[1].ID, // ETH
-			Status:            models.TransferStatusPending,
+			PaymentTemplateID:      &templateID,
+			Amount:                 0.5,
+			AssetID:                assets[1].ID, // ETH
+			Status:                 models.TransferStatusPending,
 		},
 		{
-			SourceUserID:      sourceUserID,
+			SourceUserID:           sourceUserID,
 			DestinationUserAddress: DestinationUserAddress,
-			PaymentTemplateID: &templateID,
-			Amount:            250.75,
-			AssetID:           assets[2].ID, // EURC
-			Status:            models.TransferStatusPending,
+			PaymentTemplateID:      &templateID,
+			Amount:                 250.75,
+			AssetID:                assets[2].ID, // EURC
+			Status:                 models.TransferStatusPending,
 		},
 	}
 

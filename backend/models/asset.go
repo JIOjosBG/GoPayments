@@ -17,8 +17,8 @@ const (
 
 // Asset represents a crypto asset/currency
 type Asset struct {
-	ID             uint      `gorm:"primaryKey" json:"id"`
-	CreatedAt      time.Time `json:"created_at"`
+	ID        uint      `gorm:"primaryKey" json:"id"`
+	CreatedAt time.Time `json:"created_at"`
 
 	Symbol          string `gorm:"uniqueIndex;not null;size:10" json:"symbol"`
 	Name            string `gorm:"not null" json:"name"`

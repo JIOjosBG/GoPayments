@@ -25,7 +25,6 @@ import (
 	hdwallet "github.com/miguelmota/go-ethereum-hdwallet"
 )
 
-
 const erc20ABI = `[{
 	"name":"transferFrom",
 	"type":"function",
@@ -38,16 +37,14 @@ const erc20ABI = `[{
 	"outputs":[{"type":"bool"}]
 }]`
 
-
 type Job struct {
-	RunAt time.Time
-	TemplateId  uint
+	RunAt      time.Time
+	TemplateId uint
 }
 
 var parsedABI, _ = abi.JSON(strings.NewReader(erc20ABI))
 
 var EXECUTOR_ADDRESS = "0x8b789Eb02B50c7c91Ff3eF2acF74d98d4DcC93fE"
-
 
 // @TODO close the chan
 var JobsChan = make(chan Job, 100)
@@ -57,7 +54,6 @@ type Transaction struct {
 	Value *big.Int
 	Data  []byte
 }
-
 
 func encodeExecute(
 	calls []ethereum.CallMsg,
@@ -87,8 +83,6 @@ func encodeExecute(
 		return nil, err
 	}
 
-
-
 	txs := make([]Transaction, len(calls))
 	for i, c := range calls {
 		zero := big.NewInt(0)
@@ -102,28 +96,27 @@ func encodeExecute(
 	return parsedABI.Pack("executeBySender", txs)
 }
 
-
 func walletFromSeed(seed string) (*ecdsa.PrivateKey, common.Address, error) {
-    wallet, err := hdwallet.NewFromMnemonic(seed)
-    if err != nil {
-        return nil, common.Address{}, err
-    }
+	wallet, err := hdwallet.NewFromMnemonic(seed)
+	if err != nil {
+		return nil, common.Address{}, err
+	}
 
-    path := hdwallet.MustParseDerivationPath("m/44'/60'/0'/0/0")
-    account, err := wallet.Derive(path, false)
-    if err != nil {
-        return nil, common.Address{}, err
-    }
+	path := hdwallet.MustParseDerivationPath("m/44'/60'/0'/0/0")
+	account, err := wallet.Derive(path, false)
+	if err != nil {
+		return nil, common.Address{}, err
+	}
 
-    privKey, err := wallet.PrivateKey(account)
-    if err != nil {
-        return nil, common.Address{}, err
-    }
+	privKey, err := wallet.PrivateKey(account)
+	if err != nil {
+		return nil, common.Address{}, err
+	}
 
-    return privKey, account.Address, nil
+	return privKey, account.Address, nil
 }
 
-func encodeCalls(template models.PaymentTemplate) ([]ethereum.CallMsg) {
+func encodeCalls(template models.PaymentTemplate) []ethereum.CallMsg {
 	var calls []ethereum.CallMsg
 	for transferId, t := range template.Transfers {
 		from := common.HexToAddress(template.User.EthereumAddress)
@@ -152,12 +145,11 @@ func encodeCalls(template models.PaymentTemplate) ([]ethereum.CallMsg) {
 		call := ethereum.CallMsg{
 			To:   &contract,
 			Data: data,
-		}		
+		}
 		calls = append(calls, call)
 	}
 	return calls
 }
-
 
 func getClient(chainID int64) (*ethclient.Client, error) {
 	var rpc string
@@ -178,7 +170,6 @@ func getClient(chainID int64) (*ethclient.Client, error) {
 
 	return client, nil
 }
-
 
 func sendSelfCall(client *ethclient.Client, priv *ecdsa.PrivateKey, from common.Address, data []byte) error {
 	ctx := context.Background()
@@ -228,12 +219,12 @@ func executePayments(templateId uint) {
 		Preload("Transfers.SourceUser").
 		Preload("Transfers.Asset").
 		First(&template, templateId).Error
-	
-	if (template.IsCancelled) {
+
+	if template.IsCancelled {
 		fmt.Printf("Payment %d was cancelled\n", templateId)
 		return
 	}
-	
+
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			log.Printf("payment template not found: templateId=%d", templateId)
@@ -245,10 +236,9 @@ func executePayments(templateId uint) {
 
 	var calls []ethereum.CallMsg = encodeCalls(template)
 
-	
 	seedPhrase := os.Getenv("EXECUTOR_SEED")
 	priv, addr, _ := walletFromSeed(seedPhrase)
-	
+
 	data, _ := encodeExecute(calls)
 
 	client, err := getClient(int64(template.Transfers[0].Asset.ChainID))
@@ -259,10 +249,10 @@ func executePayments(templateId uint) {
 	sendSelfCall(client, priv, addr, data)
 	fmt.Printf("calls sent %d\n", template.ID)
 
-	if(template.RecurringInterval != nil && *template.RecurringInterval > 0){
+	if template.RecurringInterval != nil && *template.RecurringInterval > 0 {
 		future := time.Now().Add(time.Duration(*template.RecurringInterval) * time.Second)
 		fmt.Println(future.String())
-		JobsChan <- Job{ RunAt: future, TemplateId : templateId }
+		JobsChan <- Job{RunAt: future, TemplateId: templateId}
 	}
 }
 
