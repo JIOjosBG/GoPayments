@@ -1,12 +1,74 @@
-import React, { useState, ChangeEvent } from "react";
-import { useBackend } from "../../contexts/BackendContext";
+import React, { useState, ChangeEvent, useCallback } from "react";
+import { Asset, useBackend } from "../../contexts/BackendContext";
+import { Interface, parseUnits } from "ethers";
+import { useEthereum } from "@/contexts/EthereumContext";
+export interface Movement {
+  asset: Asset;
+  amount: number;
+  destination: string;
+}
 
+export enum TypeOfBatch {
+  Now = "NOW",
+  Schedule = "SCHEDULE",
+  Recurring = "RECURRING",
+}
+
+const iface = new Interface([
+  "function transfer(address,uint)",
+  "function approve(address,uint)",
+]);
 function CreatePayment(): React.ReactElement {
-  const { assets, isLoadingAssets } = useBackend();
+  const { assets, isLoadingAssets, sendPaymentToBackend } = useBackend();
+  const { sendCallsViaWallet, account } = useEthereum();
 
   const [selectedAsset, setSelectedAsset] = useState<string>("USDC");
   const [amount, setAmount] = useState<string>("");
   const [destination, setDestination] = useState<string>("");
+  const [movements, setMovements] = useState<Movement[]>([]);
+  const [typeOfBatch, setTypeOfBatch] = useState<TypeOfBatch>(TypeOfBatch.Now);
+  const [scheduleTime, setScheduleTime] = useState<Date | null>(null);
+  const [recurringTime, setRecurringTime] = useState<number | null>(null);
+
+  const handleActionButton = useCallback(async () => {
+    if (account.status !== "connected") return;
+    if (typeOfBatch === TypeOfBatch.Now) {
+      const chainId: number = movements
+        .map((m) => m.asset.chain_id)
+        .reduce((c1, c2) => (c1 === c2 ? c1 : 0));
+      if (!chainId) return console.log("Err");
+
+      const calls = movements.map(
+        (m): { to: string; value: bigint; data: string } => {
+          let amount: bigint = parseUnits(
+            m.amount.toString(),
+            m.asset.decimals,
+          );
+
+          if (
+            m.asset.contract_address?.toLowerCase() ===
+            "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+          ) {
+            return { to: m.destination, value: amount, data: "0x" };
+          } else {
+            const data = iface.encodeFunctionData("transfer", [
+              m.destination,
+              amount,
+            ]);
+            return { to: m.asset.contract_address, data, value: BigInt(0) };
+          }
+        },
+      );
+      await sendCallsViaWallet(chainId, calls);
+      await sendPaymentToBackend({
+        chainId,
+        movements,
+        account: account.account,
+        type: TypeOfBatch.Now,
+        scheduledAt: Date.now(),
+      });
+    }
+  }, [movements, typeOfBatch, scheduleTime, recurringTime, account]);
 
   const handleAssetChange = (e: ChangeEvent<HTMLSelectElement>) => {
     setSelectedAsset(e.target.value);
@@ -19,6 +81,27 @@ function CreatePayment(): React.ReactElement {
   const handleDestinationChange = (e: ChangeEvent<HTMLInputElement>) => {
     setDestination(e.target.value);
   };
+
+  const handleChangeDate = (e: ChangeEvent<HTMLInputElement>) => {
+    setScheduleTime(new Date(e.target.value));
+  };
+
+  const handleRecurringTimeChange = (e: ChangeEvent<HTMLInputElement>) => {
+    console.log(e.target.value);
+    setRecurringTime(0);
+  };
+
+  const addMovement = useCallback(() => {
+    const movementsToSet = movements;
+    movementsToSet.push({
+      amount: Number(amount),
+      destination,
+      asset: assets.find((a) => a.symbol === selectedAsset)!,
+    });
+    setMovements(movementsToSet);
+    setAmount("0");
+    setDestination("");
+  }, [amount, destination, assets, movements]);
 
   return (
     <form className="mt-4">
@@ -73,6 +156,74 @@ function CreatePayment(): React.ReactElement {
           onChange={handleDestinationChange}
         />
       </div>
+      <div>
+        <button
+          onClick={addMovement}
+          disabled={!amount || Number(amount) === 0 || !destination}
+          className="btn btn-primary"
+        >
+          Add transfer
+        </button>
+      </div>
+      <div className="btn-group" role="group" aria-label="Basic example">
+        <button
+          type="button"
+          disabled={typeOfBatch === TypeOfBatch.Now}
+          onClick={() => setTypeOfBatch(TypeOfBatch.Now)}
+          className="btn btn-secondary"
+        >
+          Now
+        </button>
+        <button
+          type="button"
+          disabled={typeOfBatch === TypeOfBatch.Schedule}
+          onClick={() => setTypeOfBatch(TypeOfBatch.Schedule)}
+          className="btn btn-secondary"
+        >
+          Schedule
+        </button>
+        <button
+          type="button"
+          disabled={typeOfBatch === TypeOfBatch.Recurring}
+          onClick={() => setTypeOfBatch(TypeOfBatch.Recurring)}
+          className="btn btn-secondary"
+        >
+          Recurring
+        </button>
+      </div>
+      {typeOfBatch === TypeOfBatch.Schedule && (
+        <input
+          onChange={handleChangeDate}
+          className="form-control"
+          type="date"
+        />
+      )}
+
+      {typeOfBatch === TypeOfBatch.Recurring && (
+        <div>
+          <label>Time in minutes</label>
+          <input
+            onChange={handleRecurringTimeChange}
+            className="form-control"
+            type="number"
+          />
+        </div>
+      )}
+      <ul>
+        {movements.map((m: Movement) => (
+          <p key={m.amount.toString() + m.asset + m.destination}>
+            Send {m.amount} {m.asset.symbol} to {m.destination}
+          </p>
+        ))}
+      </ul>
+      <button
+        type="button"
+        disabled={!movements.length}
+        onClick={handleActionButton}
+        className="btn btn-primary"
+      >
+        Execute
+      </button>
     </form>
   );
 }

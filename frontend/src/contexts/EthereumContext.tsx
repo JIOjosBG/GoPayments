@@ -36,6 +36,10 @@ interface EthereumContextValue {
     signature: string;
     account: string;
   } | null>;
+  sendCallsViaWallet: (
+    chainId: number,
+    calls: { to: string; value: bigint; data: string }[],
+  ) => Promise<string>;
 }
 
 // Create the context
@@ -104,10 +108,43 @@ Sign this message to log in. Do not share this message with anyone.`;
     return { account: account.account, message, signature };
   }, [window, account]);
 
+  const sendCallsViaWallet = useCallback(
+    async (
+      chainId: number,
+      calls: { to: string; value: bigint; data: string }[],
+    ) => {
+      if (account.status !== "connected") return "";
+      if (!window.ethereum) return "";
+
+      const params = [
+        {
+          version: "2.0.0",
+          from: account.account,
+          chainId: "0x" + chainId.toString(16),
+          calls,
+        },
+      ];
+
+      try {
+        const bundleId = await window.ethereum.request({
+          method: "wallet_sendCalls",
+          params,
+        });
+
+        return (bundleId as any as string).split(":")[1];
+      } catch (err) {
+        console.error("sendCalls failed:", err);
+        return "";
+      }
+    },
+    [window, account],
+  );
+
   const value: EthereumContextValue = {
     account,
     requestAccount,
     signLoginMessage,
+    sendCallsViaWallet,
   };
 
   return (

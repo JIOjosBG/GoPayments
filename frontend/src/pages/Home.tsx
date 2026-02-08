@@ -69,8 +69,7 @@ function Home(): React.ReactElement {
                             template.transfers.map((transfer, index) => (
                               <div key={index}>
                                 <strong>To:</strong>{" "}
-                                {transfer.destination_user?.ethereum_address ||
-                                  "N/A"}
+                                {transfer.destination_user_address || "N/A"}
                                 {" | "}
                                 <strong>Asset:</strong>{" "}
                                 {transfer.asset?.symbol || "N/A"}

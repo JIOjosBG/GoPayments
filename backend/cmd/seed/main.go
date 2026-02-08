@@ -74,7 +74,7 @@ func main() {
 	log.Printf("Created payment template: %s", template.Name)
 
 	// Seed transfers from user1 to user2
-	transfers, err := seedTransfers(user1.ID, user2.ID, template.ID, assets)
+	transfers, err := seedTransfers(user1.ID, user2.EthereumAddress, template.ID, assets)
 	if err != nil {
 		log.Fatalf("Failed to seed transfers: %v", err)
 	}
@@ -179,11 +179,11 @@ func seedPaymentTemplate(userID uint, assetID uint) (*models.PaymentTemplate, er
 }
 
 // Now from user1 (source) to user2 (destination)
-func seedTransfers(sourceUserID uint, destinationUserID uint, templateID uint, assets []models.Asset) ([]models.Transfer, error) {
+func seedTransfers(sourceUserID uint, DestinationUserAddress string, templateID uint, assets []models.Asset) ([]models.Transfer, error) {
 	transfers := []models.Transfer{
 		{
 			SourceUserID:      sourceUserID,
-			DestinationUserID: destinationUserID,
+			DestinationUserAddress: DestinationUserAddress,
 			PaymentTemplateID: &templateID,
 			Amount:            100.50,
 			AssetID:           assets[0].ID, // USDC
@@ -191,7 +191,7 @@ func seedTransfers(sourceUserID uint, destinationUserID uint, templateID uint, a
 		},
 		{
 			SourceUserID:      sourceUserID,
-			DestinationUserID: destinationUserID,
+			DestinationUserAddress: DestinationUserAddress,
 			PaymentTemplateID: &templateID,
 			Amount:            0.5,
 			AssetID:           assets[1].ID, // ETH
@@ -199,7 +199,7 @@ func seedTransfers(sourceUserID uint, destinationUserID uint, templateID uint, a
 		},
 		{
 			SourceUserID:      sourceUserID,
-			DestinationUserID: destinationUserID,
+			DestinationUserAddress: DestinationUserAddress,
 			PaymentTemplateID: &templateID,
 			Amount:            250.75,
 			AssetID:           assets[2].ID, // EURC

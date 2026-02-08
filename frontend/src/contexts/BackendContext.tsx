@@ -6,6 +6,7 @@ import React, {
   useCallback,
 } from "react";
 import { useEthereum } from "./EthereumContext";
+import { Movement, TypeOfBatch } from "@/pages/components/CreatePayment";
 
 // Type definitions based on backend Go models
 export type User =
@@ -38,7 +39,7 @@ export interface PaymentTemplate {
 
 export interface Transfer {
   id?: number;
-  destination_user?: UserInfo;
+  destination_user_address?: string;
   asset?: Asset;
   amount?: string;
   [key: string]: unknown; // Allow for other properties
@@ -50,7 +51,7 @@ export interface Asset {
   symbol: string;
   name: string;
   decimals: number;
-  contract_address?: string;
+  contract_address: string;
   chain_id: number;
 }
 
@@ -76,6 +77,14 @@ interface BackendContextValue {
     message: string;
     signature: string;
     account: string;
+  }) => void;
+
+  sendPaymentToBackend: (args: {
+    chainId: number;
+    movements: Movement[];
+    account: string;
+    type: TypeOfBatch;
+    scheduledAt: number;
   }) => void;
 }
 
@@ -257,6 +266,38 @@ export function BackendProvider({ children }: BackendProviderProps) {
     fetchAssets();
   }, []);
 
+  const sendPaymentToBackend = useCallback(
+    async ({
+      chainId,
+      movements,
+      account,
+      type,
+      scheduledAt,
+    }: {
+      chainId: number;
+      movements: Movement[];
+      account: string;
+      type: TypeOfBatch;
+      scheduledAt: number;
+    }) => {
+      console.log(movements);
+      const response = await fetch(`${API_BASE_URL}/templates/${account}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userAddress: account,
+          chainId,
+          transfers: movements,
+          type,
+          scheduledAt,
+        }),
+        credentials: "include",
+      });
+      console.log(response, await response.json());
+    },
+    [],
+  );
+
   const value: BackendContextValue = {
     requestCookie,
     // User data
@@ -277,6 +318,8 @@ export function BackendProvider({ children }: BackendProviderProps) {
 
     // Utility
     API_BASE_URL,
+
+    sendPaymentToBackend,
   };
 
   return (
