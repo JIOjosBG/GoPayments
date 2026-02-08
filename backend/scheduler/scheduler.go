@@ -228,7 +228,12 @@ func executePayments(templateId uint) {
 		Preload("Transfers.SourceUser").
 		Preload("Transfers.Asset").
 		First(&template, templateId).Error
-
+	
+	if (template.IsCancelled) {
+		fmt.Printf("Payment %d was cancelled\n", templateId)
+		return
+	}
+	
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			log.Printf("payment template not found: templateId=%d", templateId)
@@ -253,7 +258,12 @@ func executePayments(templateId uint) {
 	}
 	sendSelfCall(client, priv, addr, data)
 	fmt.Printf("calls sent %d\n", template.ID)
-	// @TODO recurring calls
+
+	if(template.RecurringInterval != nil && *template.RecurringInterval > 0){
+		future := time.Now().Add(time.Duration(*template.RecurringInterval) * time.Second)
+		fmt.Println(future.String())
+		JobsChan <- Job{ RunAt: future, TemplateId : templateId }
+	}
 }
 
 func JobWatcher() {

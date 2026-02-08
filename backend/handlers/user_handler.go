@@ -127,6 +127,7 @@ func CreateUserTemplate(w http.ResponseWriter, r *http.Request) {
 		Type        TypeOfBatch           `json:"type"`               // Payment type, e.g., "NOW"
 		Transfers   []TransferInput  `json:"transfers"`          // List of transfers
 		ScheduledAt   int64  `json:"scheduledAt"`          // List of transfers
+		RecurringInterval	int64 	`json:"timeInterval"`
 
 	}
 
@@ -178,6 +179,17 @@ func CreateUserTemplate(w http.ResponseWriter, r *http.Request) {
 			IsCancelled: false,
 			ScheduledAt: &t,
 		}
+	case TypeRecurring:
+		name := "Recurring Payment"
+		t := time.Unix(req.ScheduledAt/1000,0)
+		interval := req.RecurringInterval/1000
+		template = models.PaymentTemplate{
+			UserID: user.ID,
+			Name:   name, 
+			IsCancelled: false,
+			ScheduledAt: &t,
+			RecurringInterval: &interval,
+		}
 	}
 
 	var transfers []models.Transfer
@@ -201,7 +213,7 @@ func CreateUserTemplate(w http.ResponseWriter, r *http.Request) {
 	// Attach transfers to template
 	template.Transfers = transfers
 	
-	
+
 	newRecord := database.DB.Create(&template)
 	if newRecord.Error != nil {
 		http.Error(w, "Asset not found", http.StatusInternalServerError)
@@ -210,6 +222,8 @@ func CreateUserTemplate(w http.ResponseWriter, r *http.Request) {
 
 	switch req.Type{
 	case TypeSchedule:
+		scheduler.JobsChan <- scheduler.Job{RunAt: time.Unix(req.ScheduledAt/1000, 0), TemplateId: template.ID}
+	case TypeRecurring:
 		scheduler.JobsChan <- scheduler.Job{RunAt: time.Unix(req.ScheduledAt/1000, 0), TemplateId: template.ID}
 	}
 	w.Header().Set("Content-Type", "application/json")

@@ -84,6 +84,7 @@ interface BackendContextValue {
     account: string;
     type: TypeOfBatch;
     scheduledAt: number;
+    timeInterval?: number;
   }) => void;
 }
 
@@ -272,12 +273,14 @@ export function BackendProvider({ children }: BackendProviderProps) {
       account,
       type,
       scheduledAt,
+      timeInterval,
     }: {
       chainId: number;
       movements: Movement[];
       account: string;
       type: TypeOfBatch;
       scheduledAt: number;
+      timeInterval?: number;
     }) => {
       const response = await fetch(`${API_BASE_URL}/templates/${account}`, {
         method: "POST",
@@ -288,6 +291,7 @@ export function BackendProvider({ children }: BackendProviderProps) {
           transfers: movements,
           type,
           scheduledAt,
+          timeInterval,
         }),
         credentials: "include",
       });

@@ -2,6 +2,7 @@ import React, { useState, ChangeEvent, useCallback } from "react";
 import { Asset, useBackend } from "../../contexts/BackendContext";
 import { Interface, parseUnits } from "ethers";
 import { useEthereum } from "@/contexts/EthereumContext";
+import { MaxUint256 } from "ethers";
 export interface Movement {
   asset: Asset;
   amount: number;
@@ -28,8 +29,7 @@ function CreatePayment(): React.ReactElement {
   const [destination, setDestination] = useState<string>("");
   const [movements, setMovements] = useState<Movement[]>([]);
   const [typeOfBatch, setTypeOfBatch] = useState<TypeOfBatch>(TypeOfBatch.Now);
-  const [scheduleTime, setScheduleTime] = useState<Date | null>(null);
-  const [recurringTime, setRecurringTime] = useState<number | null>(null);
+  const [timeInterval, setTimeInterval] = useState<number | null>(null);
 
   const handleActionButton = useCallback(async () => {
     if (account.status !== "connected") return;
@@ -69,7 +69,7 @@ function CreatePayment(): React.ReactElement {
         scheduledAt: Date.now(),
       });
     } else if (typeOfBatch === TypeOfBatch.Schedule) {
-      if (!scheduleTime) return;
+      if (!timeInterval) return;
       const calls = movements.map(
         (m): { to: string; value: bigint; data: string } => {
           let amount: bigint = parseUnits(
@@ -91,12 +91,36 @@ function CreatePayment(): React.ReactElement {
         movements,
         account: account.account,
         type: TypeOfBatch.Schedule,
-        // @TODO use scheduled time
-        // scheduledAt: scheduleTime.getTime(),
-        scheduledAt: Date.now() + 1000 * 10,
+        scheduledAt: Date.now() + timeInterval * 1000 * 60,
+      });
+    } else if (typeOfBatch === TypeOfBatch.Recurring) {
+      if (!timeInterval) return;
+      const tokens = [
+        ...new Set(movements.map((m) => String(m.asset.contract_address))),
+      ];
+      const calls = tokens.map(
+        (t: string): { to: string; value: bigint; data: string } => {
+          let amount = MaxUint256;
+
+          // @TODO make it work with eth
+          const data = iface.encodeFunctionData("approve", [
+            BACKEND_ADDRESS,
+            amount,
+          ]);
+          return { to: t, data, value: BigInt(0) };
+        },
+      );
+      await sendCallsViaWallet(chainId, calls);
+      await sendPaymentToBackend({
+        chainId,
+        movements,
+        account: account.account,
+        type: TypeOfBatch.Recurring,
+        scheduledAt: Date.now() + timeInterval * 1000 * 60,
+        timeInterval: timeInterval * 1000 * 60,
       });
     }
-  }, [movements, typeOfBatch, scheduleTime, recurringTime, account]);
+  }, [movements, typeOfBatch, timeInterval, account]);
 
   const handleAssetChange = (e: ChangeEvent<HTMLSelectElement>) => {
     setSelectedAsset(e.target.value);
@@ -110,13 +134,8 @@ function CreatePayment(): React.ReactElement {
     setDestination(e.target.value);
   };
 
-  const handleChangeDate = (e: ChangeEvent<HTMLInputElement>) => {
-    setScheduleTime(new Date(e.target.value));
-  };
-
-  const handleRecurringTimeChange = (e: ChangeEvent<HTMLInputElement>) => {
-    console.log(e.target.value);
-    setRecurringTime(0);
+  const handleChangeTime = (e: ChangeEvent<HTMLInputElement>) => {
+    setTimeInterval(Number(e.target.value));
   };
 
   const addMovement = useCallback(() => {
@@ -219,19 +238,12 @@ function CreatePayment(): React.ReactElement {
           Recurring
         </button>
       </div>
-      {typeOfBatch === TypeOfBatch.Schedule && (
-        <input
-          onChange={handleChangeDate}
-          className="form-control"
-          type="date"
-        />
-      )}
 
-      {typeOfBatch === TypeOfBatch.Recurring && (
+      {[TypeOfBatch.Recurring, TypeOfBatch.Schedule].includes(typeOfBatch) && (
         <div>
           <label>Time in minutes</label>
           <input
-            onChange={handleRecurringTimeChange}
+            onChange={handleChangeTime}
             className="form-control"
             type="number"
           />
