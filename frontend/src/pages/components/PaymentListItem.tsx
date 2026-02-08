@@ -2,13 +2,19 @@ import { PaymentTemplate, useBackend } from "@/contexts/BackendContext";
 import { useEthereum } from "@/contexts/EthereumContext";
 import { Interface } from "ethers";
 import { parseUnits } from "ethers";
-import { useCallback } from "react";
-import { ArrowRepeat, FileEarmarkText, Trash } from "react-bootstrap-icons";
+import { useCallback, useState } from "react";
+import {
+  ArrowRepeat,
+  Check,
+  FileEarmarkText,
+  Trash,
+} from "react-bootstrap-icons";
 const iface = new Interface(["function transfer(address,uint)"]);
 
 function PaymentListItem({ template }: { template: PaymentTemplate }) {
   const { sendCallsViaWallet } = useEthereum();
-  const { deletePaymentTemplate } = useBackend();
+  const [newName, setNewName] = useState(template.name);
+  const { deletePaymentTemplate, changeTemplateName } = useBackend();
 
   const onRepeat = useCallback(() => {
     const chainId: number = template.transfers
@@ -63,7 +69,19 @@ Amount,Destination,Asset id,Asset symbol,Asset decimals,Asset address,Asset chai
         <div className="card-body">
           <div className="d-flex justify-content-between align-items-center">
             <h6 className="mb-0">
-              {template.name}{" "}
+              <input
+                type="text"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                className="form-control form-control-sm"
+                style={{ width: "auto", display: "inline-block" }}
+              />
+              {newName !== template.name && (
+                <Check
+                  onClick={() => changeTemplateName(template.id, newName)}
+                  className="text-success mx-2"
+                />
+              )}
               <span
                 className={`badge ${
                   template.is_cancelled ? "bg-danger" : "bg-success"

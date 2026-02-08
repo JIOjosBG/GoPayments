@@ -264,3 +264,44 @@ func DeleteTemplate(w http.ResponseWriter, r *http.Request) {
 		"status": "success",
 	})
 }
+
+
+func UpdateTemplate(w http.ResponseWriter, r *http.Request) {
+	userAddress := r.Context().Value(jwtLogic.UserContextKey).(string)
+	vars := mux.Vars(r)
+	templateId := vars["templateId"]
+
+	var template models.PaymentTemplate
+	if err := database.DB.Preload("User").First(&template, "id = ?", templateId).Error; err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	if template.User.EthereumAddress != userAddress {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	// Parse newName from request body
+	var body struct {
+		NewName string `json:"newName"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Update the template name
+	template.Name = body.NewName
+	if err := database.DB.Save(&template).Error; err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{
+		"status": "success",
+		"name":   template.Name,
+	})
+}

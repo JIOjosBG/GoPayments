@@ -40,6 +40,7 @@ func main() {
 	router.Handle("/templates/{userAddress}", handlers.JWTAuth(http.HandlerFunc(handlers.GetUserTemplates))).Methods("GET")
 	router.Handle("/templates/{userAddress}", handlers.JWTAuth(http.HandlerFunc(handlers.CreateUserTemplate))).Methods("POST")
 	router.Handle("/templates/{templateId}", handlers.JWTAuth(http.HandlerFunc(handlers.DeleteTemplate))).Methods("DELETE")
+	router.Handle("/templates/{templateId}", handlers.JWTAuth(http.HandlerFunc(handlers.UpdateTemplate))).Methods("PUT")
 
 
 	// Asset routes

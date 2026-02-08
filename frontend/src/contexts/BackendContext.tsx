@@ -87,6 +87,7 @@ interface BackendContextValue {
     timeInterval?: number;
   }) => void;
   deletePaymentTemplate: (n: number) => void;
+  changeTemplateName: (n: number, name: string) => void;
   fetchTemplates: () => void;
 }
 
@@ -190,6 +191,18 @@ export function BackendProvider({ children }: BackendProviderProps) {
         credentials: "include",
       });
 
+      fetchTemplates();
+    },
+    [user],
+  );
+
+  const changeTemplateName = useCallback(
+    async (templateId: number, newName: string) => {
+      await fetch(`${API_BASE_URL}/templates/${templateId}`, {
+        method: "PUT",
+        credentials: "include",
+        body: JSON.stringify({ newName }),
+      });
       fetchTemplates();
     },
     [user],
@@ -334,6 +347,7 @@ export function BackendProvider({ children }: BackendProviderProps) {
 
     sendPaymentToBackend,
     deletePaymentTemplate,
+    changeTemplateName,
     fetchTemplates,
   };
 
