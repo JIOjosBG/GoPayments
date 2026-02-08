@@ -7,12 +7,22 @@ import (
 	"backend/database"
 	"backend/handlers"
 	"backend/jwtLogic"
+	"backend/scheduler"
 
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
+
+	"github.com/joho/godotenv"
 )
 
 func main() {
+
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env")
+	}
+
+	go scheduler.JobWatcher()
 	// Initialize database
 	if err := database.InitDB(); err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
