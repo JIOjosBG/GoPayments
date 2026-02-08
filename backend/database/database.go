@@ -3,6 +3,7 @@ package database
 import (
 	"fmt"
 	"log"
+	"os"
 
 	"backend/models"
 
@@ -19,8 +20,9 @@ func InitDB() error {
 	var dialector gorm.Dialector
 
 	// You can move these credentials to environment variables or config files.
-	mysqlDSN := "gouser:gouserpass@tcp(127.0.0.1:3306)/paymentProcessor?charset=utf8mb4&parseTime=True&loc=Local"
-
+	user := os.Getenv("DB_USER")
+	pass := os.Getenv("DB_PASS")
+	mysqlDSN := fmt.Sprintf("%s:%s@tcp(127.0.0.1:3306)/paymentProcessor?charset=utf8mb4&parseTime=True&loc=Local", user, pass)
 	dialector = mysql.Open(mysqlDSN)
 
 	DB, err = gorm.Open(dialector, &gorm.Config{
