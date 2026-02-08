@@ -126,12 +126,12 @@ Sign this message to log in. Do not share this message with anyone.`;
       ];
 
       try {
-        const bundleId = await window.ethereum.request({
+        await window.ethereum.request({
           method: "wallet_sendCalls",
           params,
         });
-
-        return (bundleId as any as string).split(":")[1];
+        return "";
+        // return (bundleId as any as string).split(":")[1];
       } catch (err) {
         console.error("sendCalls failed:", err);
         return "";

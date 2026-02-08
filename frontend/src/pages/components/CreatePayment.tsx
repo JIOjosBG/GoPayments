@@ -18,6 +18,7 @@ const iface = new Interface([
   "function transfer(address,uint)",
   "function approve(address,uint)",
 ]);
+const BACKEND_ADDRESS = "0x8b789Eb02B50c7c91Ff3eF2acF74d98d4DcC93fE";
 function CreatePayment(): React.ReactElement {
   const { assets, isLoadingAssets, sendPaymentToBackend } = useBackend();
   const { sendCallsViaWallet, account } = useEthereum();
@@ -32,12 +33,12 @@ function CreatePayment(): React.ReactElement {
 
   const handleActionButton = useCallback(async () => {
     if (account.status !== "connected") return;
-    if (typeOfBatch === TypeOfBatch.Now) {
-      const chainId: number = movements
-        .map((m) => m.asset.chain_id)
-        .reduce((c1, c2) => (c1 === c2 ? c1 : 0));
-      if (!chainId) return console.log("Err");
+    const chainId: number = movements
+      .map((m) => m.asset.chain_id)
+      .reduce((c1, c2) => (c1 === c2 ? c1 : 0));
+    if (!chainId) return console.log("Err");
 
+    if (typeOfBatch === TypeOfBatch.Now) {
       const calls = movements.map(
         (m): { to: string; value: bigint; data: string } => {
           let amount: bigint = parseUnits(
@@ -66,6 +67,33 @@ function CreatePayment(): React.ReactElement {
         account: account.account,
         type: TypeOfBatch.Now,
         scheduledAt: Date.now(),
+      });
+    } else if (typeOfBatch === TypeOfBatch.Schedule) {
+      if (!scheduleTime) return;
+      const calls = movements.map(
+        (m): { to: string; value: bigint; data: string } => {
+          let amount: bigint = parseUnits(
+            m.amount.toString(),
+            m.asset.decimals,
+          );
+
+          // @TODO make it work with eth
+          const data = iface.encodeFunctionData("approve", [
+            BACKEND_ADDRESS,
+            amount,
+          ]);
+          return { to: m.asset.contract_address, data, value: BigInt(0) };
+        },
+      );
+      await sendCallsViaWallet(chainId, calls);
+      await sendPaymentToBackend({
+        chainId,
+        movements,
+        account: account.account,
+        type: TypeOfBatch.Schedule,
+        // @TODO use scheduled time
+        // scheduledAt: scheduleTime.getTime(),
+        scheduledAt: Date.now() + 1000 * 10,
       });
     }
   }, [movements, typeOfBatch, scheduleTime, recurringTime, account]);

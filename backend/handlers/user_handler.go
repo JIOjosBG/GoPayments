@@ -3,13 +3,13 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"time"
 
 	"backend/database"
 	"backend/jwtLogic"
 	"backend/models"
+	"backend/scheduler"
 
 	"github.com/gorilla/mux"
 	"gorm.io/gorm"
@@ -97,6 +97,14 @@ func CreateUserTemplate(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userAddress := vars["userAddress"]
 
+	type TypeOfBatch string
+
+	const (
+		TypeNow       TypeOfBatch = "NOW"
+		TypeSchedule  TypeOfBatch = "SCHEDULE"
+		TypeRecurring TypeOfBatch = "RECURRING"
+	)
+
 	type AssetInput struct {
 		ID             uint      `json:"id"`                       // Asset DB ID
 		CreatedAt      time.Time `json:"created_at"`               // Asset creation time
@@ -116,7 +124,7 @@ func CreateUserTemplate(w http.ResponseWriter, r *http.Request) {
 	type CreateTemplateRequest struct {
 		UserAddress string           `json:"userAddress"`        // Ethereum address of the user
 		ChainID     uint64           `json:"chainId"`            // Blockchain network ID
-		Type        string           `json:"type"`               // Payment type, e.g., "NOW"
+		Type        TypeOfBatch           `json:"type"`               // Payment type, e.g., "NOW"
 		Transfers   []TransferInput  `json:"transfers"`          // List of transfers
 		ScheduledAt   int64  `json:"scheduledAt"`          // List of transfers
 
@@ -151,20 +159,26 @@ func CreateUserTemplate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println(req)
 	// start creating the record itself
-	// @TODO name should be dependant on type of payment
-	name := "Payment"
-	t := time.Unix(req.ScheduledAt/1000,0)
-	var interval int64 = 0 
-	template := models.PaymentTemplate{
-		UserID: user.ID,
-		Name:   name, 
-		IsCancelled: false,
-		ScheduledAt: &t,
-		RecurringInterval: &interval,
+	var template models.PaymentTemplate
+	switch req.Type {
+	case TypeNow:
+		name := "Payment"	
+		template = models.PaymentTemplate{
+			UserID: user.ID,
+			Name:   name, 
+			IsCancelled: false,
+		}
+	case TypeSchedule:
+		name := "Scheduled Payment"
+		t := time.Unix(req.ScheduledAt/1000,0)
+		template = models.PaymentTemplate{
+			UserID: user.ID,
+			Name:   name, 
+			IsCancelled: false,
+			ScheduledAt: &t,
+		}
 	}
-
 
 	var transfers []models.Transfer
 	for _, t := range req.Transfers {
@@ -187,8 +201,20 @@ func CreateUserTemplate(w http.ResponseWriter, r *http.Request) {
 	// Attach transfers to template
 	template.Transfers = transfers
 	
-	database.DB.Create(&template)
-	w.Header().Set("Content-Type", "application/json")
 	
-	// @TODO return success
+	newRecord := database.DB.Create(&template)
+	if newRecord.Error != nil {
+		http.Error(w, "Asset not found", http.StatusInternalServerError)
+		return
+	}
+
+	switch req.Type{
+	case TypeSchedule:
+		scheduler.JobsChan <- scheduler.Job{RunAt: time.Unix(req.ScheduledAt/1000, 0), TemplateId: template.ID}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{
+		"status": "success",
+	})
 }

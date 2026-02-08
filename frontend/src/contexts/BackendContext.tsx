@@ -279,7 +279,6 @@ export function BackendProvider({ children }: BackendProviderProps) {
       type: TypeOfBatch;
       scheduledAt: number;
     }) => {
-      console.log(movements);
       const response = await fetch(`${API_BASE_URL}/templates/${account}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
