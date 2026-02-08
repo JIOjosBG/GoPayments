@@ -108,7 +108,6 @@ func CreateUserTemplate(w http.ResponseWriter, r *http.Request) {
 
 	type AssetInput struct {
 		ID             uint      `json:"id"`                       // Asset DB ID
-		CreatedAt      time.Time `json:"created_at"`               // Asset creation time
 		Symbol         string    `json:"symbol"`                   // Asset symbol
 		Name           string    `json:"name"`                     // Asset name
 		Decimals       uint8     `json:"decimals"`                 // Asset decimals

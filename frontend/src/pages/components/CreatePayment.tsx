@@ -2,6 +2,7 @@ import React, { useState, ChangeEvent, useCallback } from "react";
 import { Asset, useBackend } from "../../contexts/BackendContext";
 import { Interface, parseUnits } from "ethers";
 import { useEthereum } from "@/contexts/EthereumContext";
+import { Trash } from "react-bootstrap-icons";
 import { MaxUint256 } from "ethers";
 export interface Movement {
   asset: Asset;
@@ -71,11 +72,11 @@ function CreatePayment(): React.ReactElement {
       if (rows[1].split(",").length !== expectedRow1.split(",").length)
         return console.error("Wrong csv format: lines[1] arguments length");
       const [
-        name,
+        templateName,
         chainId,
         fromUserAddress,
         scheduledAt,
-        intercal,
+        intervalFromScv,
         numberOfTransfers,
       ] = rows[1].split(",");
 
@@ -93,15 +94,13 @@ function CreatePayment(): React.ReactElement {
             return;
           }
 
-          const [
-            amount,
-            destination,
-            assetId,
-            symbol,
-            decimals,
-            contract_address,
-            chainId,
-          ] = r.split(",");
+          const [amount, destination, assetId] = r.split(",");
+          const asset = assets.find((a) => a.id === Number(assetId));
+          if (!asset) {
+            console.error("Wrong csv format: asset not found");
+            return;
+          }
+          const { symbol, decimals, contract_address, chain_id, name } = asset;
           return {
             amount: Number(amount),
             destination,
@@ -109,16 +108,15 @@ function CreatePayment(): React.ReactElement {
               id: Number(assetId),
               created_at: "",
               symbol,
-              name: "",
+              name,
               decimals: Number(decimals),
               contract_address,
-              chain_id: Number(chainId),
+              chain_id: Number(chain_id),
             },
           };
         })
         .filter(Boolean);
-      const calls = movementsToSimpleTransfers(movements);
-      sendCallsViaWallet(Number(chainId), calls);
+      setMovements(movements);
     };
     input.click();
   }, []);
@@ -210,6 +208,12 @@ function CreatePayment(): React.ReactElement {
     setTimeInterval(Number(e.target.value));
   };
 
+  const removeMovement = useCallback(
+    (index: number) => {
+      setMovements((prev) => prev.filter((_, i) => i !== index));
+    },
+    [movements, setMovements],
+  );
   const addMovement = useCallback(() => {
     const movementsToSet = movements;
     movementsToSet.push({
@@ -325,10 +329,23 @@ function CreatePayment(): React.ReactElement {
           </div>
         )}
         <ul>
-          {movements.map((m: Movement) => (
-            <p key={m.amount.toString() + m.asset + m.destination}>
-              Send {m.amount} {m.asset.symbol} to {m.destination}
-            </p>
+          {movements.map((m: Movement, index: number) => (
+            <div
+              key={m.amount.toString() + m.asset + m.destination}
+              className="d-flex align-items-center justify-content-between border rounded px-3 py-2 mb-2"
+            >
+              <span>
+                <strong>{m.amount}</strong> {m.asset.symbol}
+                <span className="text-muted"> → </span>
+                {m.destination}
+              </span>
+
+              <Trash
+                role="button"
+                className="text-danger"
+                onClick={() => removeMovement(index)}
+              />
+            </div>
           ))}
         </ul>
         <button
@@ -339,15 +356,14 @@ function CreatePayment(): React.ReactElement {
         >
           Execute
         </button>
+        <button
+          type="button"
+          onClick={simpleCsvExecute}
+          className="btn btn-primary"
+        >
+          Execute now from CSV
+        </button>
       </form>
-      <hr />
-      <button
-        type="button"
-        onClick={simpleCsvExecute}
-        className="btn btn-primary"
-      >
-        Execute now from CSV
-      </button>
     </>
   );
 }

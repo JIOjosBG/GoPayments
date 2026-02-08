@@ -1,0 +1,4 @@
+Name,Chain id,User address,Scheduled at,Interval in seconds,Number of transfers
+Recurring Payment,8453,0x6969174FD72466430a46e18234D0b530c9FD5f49,2026-02-08T15:22:29+02:00,18,1
+Amount,Destination,Asset id,Asset symbol,Asset decimals,Asset address,Asset chain id
+0.001,0x6969174FD72466430a46e18234D0b530c9FD5f49,1,USDC,6,0x833589fcd6edb6e08f4c7c32d4f71b54bda02913,8453
