@@ -1,18 +1,21 @@
 package jwtLogic
 
 import (
+	"backend/database"
+	"backend/models"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"gorm.io/gorm"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 )
-
 
 // @TODO change
 var JwtKey = []byte("TODO_CHANGE_SECRET")
@@ -69,6 +72,23 @@ func GenerateToken(w http.ResponseWriter, r *http.Request) {
 		"userAddress": req.UserAddress,
 		"exp":         time.Now().Add(15 * time.Minute).Unix(),
 	}
+
+	var existingUser models.User
+	err = database.DB.Where("ethereum_address = ?", req.UserAddress).First(&existingUser).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		user := models.User{
+			EthereumAddress: req.UserAddress,
+			CreatedAt:       time.Now(),
+		}
+		if err := database.DB.Create(&user).Error; err != nil {
+			http.Error(w, "could not create user", http.StatusInternalServerError)
+			return
+		}
+	} else if err != nil {
+		http.Error(w, "database error", http.StatusInternalServerError)
+		return
+	}
+
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenStr, err := token.SignedString(JwtKey)

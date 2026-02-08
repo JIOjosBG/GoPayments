@@ -202,11 +202,11 @@ export function BackendProvider({ children }: BackendProviderProps) {
       return;
     }
     fetchUser(ethereumAccount.account);
-  }, [ethereumAccount.status]);
+  }, [ethereumAccount]);
 
   useEffect(() => {
     if (user.status === "ready") fetchTemplates();
-  }, [user.status]);
+  }, [user.status, ethereumAccount]);
 
   // Fetch payment templates as soon as account is connected
   const fetchTemplates = useCallback(async () => {

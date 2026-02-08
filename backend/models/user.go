@@ -15,8 +15,6 @@ type User struct {
 
 	EthereumAddress string `gorm:"uniqueIndex;size:42;not null" json:"ethereum_address"`
 
-	IsAnonymous bool `gorm:"not null;default:false" json:"is_anonymous"`
-
 	// Relations
 	PaymentTemplates []PaymentTemplate `gorm:"foreignKey:UserID" json:"payment_templates,omitempty"`
 }

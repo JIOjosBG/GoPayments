@@ -132,7 +132,6 @@ func seedUser(ethAddress string, email string, username string) (*models.User, e
 		EthereumAddress: ethAddress,
 		Email:           stringPtr(email),
 		Username:        stringPtr(username),
-		IsAnonymous:     false,
 	}
 
 	// Check if user already exists
