@@ -75,6 +75,7 @@ func GetUserTemplates(w http.ResponseWriter, r *http.Request) {
 		Preload("PaymentTemplates.Transfers").
 		Preload("PaymentTemplates.Transfers.SourceUser").
 		Preload("PaymentTemplates.Transfers.Asset").
+		Preload("PaymentTemplates.User").
 		Where("ethereum_address = ?", userAddress).
 		First(&user)
 

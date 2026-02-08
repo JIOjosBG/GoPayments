@@ -3,8 +3,11 @@ import { useEthereum } from "@/contexts/EthereumContext";
 import { Interface } from "ethers";
 import { parseUnits } from "ethers";
 import { useCallback } from "react";
-import { ArrowRepeat } from "react-bootstrap-icons";
-
+import {
+  ArrowRepeat,
+  FileEarmarkText,
+  TerminalPlus,
+} from "react-bootstrap-icons";
 const iface = new Interface(["function transfer(address,uint)"]);
 
 function PaymentListItem({ template }: { template: PaymentTemplate }) {
@@ -36,6 +39,27 @@ function PaymentListItem({ template }: { template: PaymentTemplate }) {
     );
     sendCallsViaWallet(chainId, calls);
   }, [template.transfers, sendCallsViaWallet]);
+
+  const exportAsCsv = useCallback(() => {
+    const contents =
+      `Name,Chain id,User address,Scheduled at,Interval in seconds,Number of transfers
+${template.name},${template.transfers[0].asset.chain_id},${template.user.ethereum_address},${template.scheduled_at},${template.recurring_interval},${template.transfers.length}
+Amount,Destination,Asset id,Asset symbol,Asset decimals,Asset address,Asset chain id` +
+      "\n" +
+      template.transfers
+        .map(
+          (t) =>
+            `${t.amount},${t.destination_user_address},${t.asset.id},${t.asset.symbol},${t.asset.decimals},${t.asset.contract_address},${t.asset.chain_id}`,
+        )
+        .join("\n");
+    const blob = new Blob([contents], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${template.name}-${template.id}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }, [template]);
   return (
     <div className="container my-2">
       <div className="card shadow-sm">
@@ -51,13 +75,20 @@ function PaymentListItem({ template }: { template: PaymentTemplate }) {
                 {template.is_cancelled ? "Cancelled" : "Active"}
               </span>
             </h6>
-
-            <button
-              className="btn btn-outline-primary btn-sm"
-              onClick={onRepeat}
-            >
-              <ArrowRepeat />
-            </button>
+            <div>
+              <button
+                className="btn btn-outline-primary btn-sm"
+                onClick={onRepeat}
+              >
+                <ArrowRepeat />
+              </button>
+              <button
+                className="btn btn-outline-primary btn-sm"
+                onClick={exportAsCsv}
+              >
+                <FileEarmarkText />
+              </button>
+            </div>
           </div>
 
           {template.transfers?.length > 0 && (

@@ -120,6 +120,7 @@ function CreatePayment(): React.ReactElement {
         timeInterval: timeInterval * 1000 * 60,
       });
     }
+    setMovements([]);
   }, [movements, typeOfBatch, timeInterval, account]);
 
   const handleAssetChange = (e: ChangeEvent<HTMLSelectElement>) => {

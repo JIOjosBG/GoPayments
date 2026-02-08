@@ -33,7 +33,7 @@ export interface PaymentTemplate {
   is_cancelled: boolean;
   scheduled_at?: string | null;
   recurring_interval?: number | null;
-  user?: UserInfo;
+  user: UserInfo;
   transfers: Transfer[];
 }
 
