@@ -66,8 +66,7 @@ function PaymentListItem({ template }: { template: PaymentTemplate }) {
                 <li key={index} className="list-group-item small">
                   <strong>To:</strong>{" "}
                   {transfer.destination_user_address || "N/A"} |{" "}
-                  <strong>Asset:</strong> {transfer.asset?.symbol || "N/A"} |{" "}
-                  <strong>Amount:</strong> {transfer.amount}
+                  {transfer.amount} {transfer.asset?.symbol || "N/A"}{" "}
                 </li>
               ))}
             </ul>
