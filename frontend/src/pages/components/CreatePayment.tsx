@@ -228,6 +228,7 @@ function CreatePayment(): React.ReactElement {
 
   return (
     <>
+      <h2>Create a payment</h2>
       <form className="mt-4">
         <div className="mb-3">
           <label htmlFor="asset-select" className="form-label">

@@ -1,8 +1,14 @@
 import { useBackend } from "@/contexts/BackendContext";
 import PaymentListItem from "./components/PaymentListItem";
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 export function History() {
-  const { isLoadingTemplates, templates } = useBackend();
+  const { isLoadingTemplates, templates, user } = useBackend();
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (user.status === "not_authenticated") navigate("/");
+  }, [user.status]);
   return (
     <div className="container">
       <h3 className="mt-4">Payment Templates</h3>

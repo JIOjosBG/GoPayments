@@ -1,12 +1,16 @@
+import { useEthereum } from "@/contexts/EthereumContext";
+import { useEffect } from "react";
 import { Navbar, Nav, Container } from "react-bootstrap";
 import { Link, NavLink } from "react-router-dom";
 
 const Header = () => {
+  const { account } = useEthereum();
+
   return (
     <Navbar bg="dark" variant="dark" expand="lg" sticky="top">
       <Container>
         <Navbar.Brand as={Link} to="/">
-          🚀 GoPayments
+          🚀 GoPayments {account.status === "connected" ? account.account : ""}
         </Navbar.Brand>
 
         <Navbar.Toggle aria-controls="main-navbar" />
@@ -20,12 +24,6 @@ const Header = () => {
             </Nav.Link>
             <Nav.Link as={NavLink} to="/history">
               History
-            </Nav.Link>
-            <Nav.Link as={NavLink} to="/create">
-              Create
-            </Nav.Link>
-            <Nav.Link as={NavLink} to="/login">
-              Login
             </Nav.Link>
           </Nav>
         </Navbar.Collapse>

@@ -6,7 +6,7 @@ import PaymentListItem from "./components/PaymentListItem";
 
 function Home(): React.ReactElement {
   const { requestAccount, signLoginMessage } = useEthereum();
-  const { user, templates, isLoadingTemplates, requestCookie } = useBackend();
+  const { user, requestCookie } = useBackend();
 
   const attemptToAuthenticate = useCallback(async () => {
     const signedMessageData = await signLoginMessage();
@@ -37,33 +37,7 @@ function Home(): React.ReactElement {
             <p>Loading user data...</p>
           ) : (
             <div className="row">
-              <div className="col-md-6">
-                <h2>User Information</h2>
-                {user.status === "ready" ? (
-                  <div>
-                    <p>
-                      <strong>Ethereum Address:</strong>{" "}
-                      {user.user.ethereum_address}
-                    </p>
-                    {
-                      <p>
-                        <strong>Username:</strong> {user.user.username}
-                      </p>
-                    }
-                    <p>
-                      <strong>Anonymous:</strong>{" "}
-                      {user.user.is_anonymous ? "Yes" : "No"}
-                    </p>
-                  </div>
-                ) : user.status === "error" ? (
-                  <p>Error getting user wit address {user.address}.</p>
-                ) : (
-                  <p>unknown state</p>
-                )}
-              </div>
-              <div className="col-md-6">
-                <CreatePayment />
-              </div>
+              <CreatePayment />
             </div>
           )}
         </div>
